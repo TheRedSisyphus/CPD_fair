@@ -1,4 +1,5 @@
 import os
+import shutil
 
 
 # Delete all files in a directory, except file named pattern
@@ -13,5 +14,11 @@ def delete_files(path: str, pattern: str = "parameters.json"):
             delete_files(file_path)
 
 
+def copy_dir(source: str, destination: str):
+    shutil.copytree(src=source, dst=destination,
+                    ignore=shutil.ignore_patterns('*.txt', '*.png', '*.csv', '*.pt', 'coordinates.json'))
+
+
 if __name__ == "__main__":
-    delete_files("")
+    copy_dir(source="",
+             destination="")
