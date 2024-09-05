@@ -10,7 +10,7 @@ import config.parameters as p
 # This script exists mainly for reproducibility and explainability
 
 if __name__ == "__main__":
-    db_name = "adult"
+    db_name = "credit"
 
     if db_name == "compas":
         data = pd.read_csv(os.path.join(p.db_raw_dir, db_name + ".csv"))
@@ -56,6 +56,8 @@ if __name__ == "__main__":
         # First row is the header
         data.columns = data.iloc[0]
         data = data[1:]
+        data.index -= 1
+
         # Lower all column names
         data.columns = [x.lower() for x in data.columns]
         #  0 for Female and 1 for Male
