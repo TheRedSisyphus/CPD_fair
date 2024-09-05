@@ -1,0 +1,2 @@
+2024-09-05 12:35:38,222 - lh_repr.py - INFO - Le nombre de points tel que Y > X est : 4401 (sur un total de 6105 points), soit 72.09% des points.
+Le nombre de points tel que Y ≤ X est : 1704 (sur un total de 6105 points), soit 27.91% des points.

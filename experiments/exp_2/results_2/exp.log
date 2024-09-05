@@ -1,0 +1,4 @@
+2024-09-05 12:35:54,999 - CPDExtract.py - INFO - Created first histogram at /Users/benjamindjian/Desktop/Maîtrise/code/CPDExtract/experiments/exp_2/results_2/hist_lr.txt
+2024-09-05 12:35:57,960 - CPDExtract.py - INFO - Created second histogram at /Users/benjamindjian/Desktop/Maîtrise/code/CPDExtract/experiments/exp_2/results_2/hist_hr.txt
+2024-09-05 12:36:00,103 - CPDExtract.py - INFO - Computed CDP of first group at /Users/benjamindjian/Desktop/Maîtrise/code/CPDExtract/experiments/exp_2/results_2/lh_f-lr.txt
+2024-09-05 12:36:01,571 - CPDExtract.py - INFO - Computed CDP of second group at /Users/benjamindjian/Desktop/Maîtrise/code/CPDExtract/experiments/exp_2/results_2/lh_f-hr.txt

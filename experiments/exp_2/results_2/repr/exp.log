@@ -1,0 +1,4 @@
+2024-09-05 12:36:02,723 - lh_repr.py - INFO - Le nombre de points tel que Y > X est : 2721 (sur un total de 2939 points), soit 92.58% des points.
+Le nombre de points tel que Y ≤ X est : 218 (sur un total de 2939 points), soit 7.42% des points.
+2024-09-05 12:36:08,270 - lh_repr.py - INFO - The area between the curves lh_m-lr.txt and lh_f-lr.txt is 8.2283500603.
+The area between the curves lh_m-hr.txt and lh_f-hr.txt is -28.90859897
