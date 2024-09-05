@@ -17,8 +17,6 @@ from src.utils import parse_args, get_target, get_protec_attr
 
 # todo : rework logging
 
-# Todo : other todo
-
 def read_parameters(file: str) -> dict[str, Any]:
     """Read parameters file and return python dict with absolute path using config file"""
     base_dir = os.path.dirname(file)
@@ -32,10 +30,10 @@ def read_parameters(file: str) -> dict[str, Any]:
     db_name = param_dict['work_db']
     param_dict['target'] = get_target(db_name)
     param_dict['work_db'] = os.path.join(p.db_refined_dir, param_dict['work_db'] + ".csv")
-    param_dict["index_path"] = os.path.join(base_dir, "indexes.txt")
+    param_dict["index_path"] = os.path.join(base_dir, p.indexes_path)
 
-    param_dict['train']['save_path'] = os.path.join(base_dir, "train_data.csv")
-    param_dict['test']['save_path'] = os.path.join(base_dir, "test_data.csv")
+    param_dict['train']['save_path'] = os.path.join(base_dir, p.train_data_path)
+    param_dict['test']['save_path'] = os.path.join(base_dir, p.test_data_path)
 
     # If we ignore protec attributes for test or train, then we ignore attr for both
     if bool(param_dict["train"].get("remove_protec_attr")) != bool(param_dict["train"].get("remove_protec_attr")):
@@ -50,8 +48,8 @@ def read_parameters(file: str) -> dict[str, Any]:
     param_dict['model']['train_path'] = param_dict['train']['save_path']
     param_dict['model']['test_path'] = param_dict['test']['save_path']
     param_dict['model']['set_name_path'] = os.path.join(os.path.dirname(param_dict['model']['train_path']),
-                                                        "set_name.csv")
-    param_dict['model']['pa_path'] = os.path.join(base_dir, "protec_attr_index.csv")
+                                                        p.set_name_path)
+    param_dict['model']['pa_path'] = os.path.join(base_dir, p.protec_attr_path)
 
     with open(os.path.join(base_dir, "protocol_exp.txt"), mode='w') as protocol:
         protocol.write("=== GENERAL INFORMATIONS ==\n")

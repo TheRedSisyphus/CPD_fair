@@ -9,6 +9,12 @@ exp_dir_path = "/Users/benjamindjian/Desktop/Maîtrise/code/CPDExtract/experimen
 db_raw_dir = "/Users/benjamindjian/Desktop/Maîtrise/code/CPDExtract/raw_data"
 # Where original csv post treatment are stored
 db_refined_dir = "/Users/benjamindjian/Desktop/Maîtrise/code/CPDExtract/refined_csv"
+data_dir_name = "_data"
+indexes_path = "indexes.txt"
+train_data_path = "train_data.csv"
+test_data_path = "test_data.csv"
+set_name_path = "set_name.csv"
+protec_attr_path = "protec_attr_index.csv"
 # endregion
 
 # region CALCULATIONS

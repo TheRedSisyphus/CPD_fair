@@ -50,7 +50,7 @@ def read_parameters(file: str) -> dict[str, Any]:
         if key not in param_dict:
             raise ValueError(f"Missing key in parameters : {key}")
 
-    data_dir = os.path.join(os.path.dirname(os.path.dirname(file)), "_data")
+    data_dir = os.path.join(os.path.dirname(os.path.dirname(file)), p.data_dir_name)
     data_param_file = os.path.join(data_dir, 'parameters.json')
     with open(data_param_file) as data_param:
         data_param_dict = json.load(data_param)
@@ -60,12 +60,12 @@ def read_parameters(file: str) -> dict[str, Any]:
     attr_name = get_protec_attr(data_param_dict['protec_attr'])
     param_dict['sens_attr'] = attr_name
 
-    param_dict["train_db_path"] = os.path.join(data_dir, "train_data.csv")  # Todo: put in config file filename
-    param_dict["test_db_path"] = os.path.join(data_dir, "test_data.csv")
-    param_dict["sn_path"] = os.path.join(data_dir, "set_name.csv")
+    param_dict["train_db_path"] = os.path.join(data_dir, p.train_data_path)
+    param_dict["test_db_path"] = os.path.join(data_dir, p.test_data_path)
+    param_dict["sn_path"] = os.path.join(data_dir, p.set_name_path)
 
     param_dict["model_path"] = os.path.join(data_dir, db_name + ".pt")
-    param_dict["index_path"] = os.path.join(data_dir, "indexes.txt")
+    param_dict["index_path"] = os.path.join(data_dir, p.indexes_path)
 
     return param_dict
 
