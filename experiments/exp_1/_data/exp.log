@@ -1,4 +1,0 @@
-2024-09-05 12:27:27,199 - prep_exp.py - INFO - Train database generated at /Users/benjamindjian/Desktop/Maîtrise/code/CPDExtract/experiments/exp_1/_data/train_data.csv
-2024-09-05 12:27:43,777 - prep_exp.py - INFO - Model trained and saved at /Users/benjamindjian/Desktop/Maîtrise/code/CPDExtract/experiments/exp_1/_data/adult.pt
-2024-09-05 12:27:45,035 - prep_exp.py - INFO - Train database generated at /Users/benjamindjian/Desktop/Maîtrise/code/CPDExtract/experiments/exp_1/_data/test_data.csv
-2024-09-05 12:27:45,810 - prep_exp.py - INFO - Indexes generated at /Users/benjamindjian/Desktop/Maîtrise/code/CPDExtract/experiments/exp_1/_data/indexes.txt
