@@ -16,7 +16,12 @@ def delete_files(path: str, pattern: str = "parameters.json"):
 
 def copy_dir(source: str, destination: str):
     shutil.copytree(src=source, dst=destination,
-                    ignore=shutil.ignore_patterns('*.txt', '*.png', '*.csv', '*.pt', 'coordinates.json'))
+                    ignore=shutil.ignore_patterns('*.txt',
+                                                  '*.png',
+                                                  '*.csv',
+                                                  '*.pt',
+                                                  'coordinates.json',
+                                                  '*.log'))
 
 
 if __name__ == "__main__":
