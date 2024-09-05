@@ -378,7 +378,7 @@ def dataframe_to_loader(df: DataFrame, target: str, ) -> DataLoader:
 
 
 def get_data_loader(train_data_path: str,
-                    test_data_path: str,
+                    test_data_path: str | None,
                     set_name_path: str,
                     target: str) -> dict[str, dict[str, DataLoader]]:
     """
@@ -391,10 +391,10 @@ def get_data_loader(train_data_path: str,
     set_name = set_name.squeeze()  # converting to pandas Series
 
     train_data = pd.read_csv(train_data_path, index_col='inputId')
-    test_data = pd.read_csv(test_data_path, index_col='inputId')
-
-    loaders = {"train_db": {"all": dataframe_to_loader(train_data, target=target)},
-               "test_db": {"all": dataframe_to_loader(test_data, target=target)}}
+    loaders = {"train_db": {"all": dataframe_to_loader(train_data, target=target)}}
+    if test_data_path is not None:
+        test_data = pd.read_csv(test_data_path, index_col='inputId')
+        loaders["test_db"] = {"all": dataframe_to_loader(test_data, target=target)}
 
     # Create smaller loaders for each set
     for set_n in set_name.unique():  # squeeze is to convert pd.Dataframe to pd.Series
@@ -404,8 +404,9 @@ def get_data_loader(train_data_path: str,
         train_data_loader = dataframe_to_loader(df=df_train, target=target)
         loaders["train_db"][set_n] = train_data_loader
 
-        df_test = test_data[set_name == set_n]
-        test_data_loader = dataframe_to_loader(df=df_test, target=target)
-        loaders["test_db"][set_n] = test_data_loader
+        if test_data_path is not None:
+            df_test = test_data[set_name == set_n]
+            test_data_loader = dataframe_to_loader(df=df_test, target=target)
+            loaders["test_db"][set_n] = test_data_loader
 
     return loaders

@@ -15,6 +15,13 @@ from src.utils import parse_args, get_target, get_protec_attr
 
 # Todo : traiter GanSan comme un traitement
 
+# Todo : rework logging in predictor.py
+
+# Todo : CR avant / apres entrainement
+# Todo : DIR avant / apres entrainement
+# Todo : Gansan
+# Todo : Sans attribut sensible
+
 def read_parameters(file: str) -> dict[str, Any]:
     """Read parameters file and return python dict with absolute path using config file"""
     base_dir = os.path.dirname(file)
@@ -102,7 +109,7 @@ if __name__ == "__main__":
     model = Predictor(dimensions=params["model"]["dimensions"], lr=params["model"]["lr"])
 
     load = get_data_loader(train_data_path=params["model"]["train_path"],
-                           test_data_path=params["model"]["test_path"],
+                           test_data_path=None,
                            set_name_path=params["model"]["set_name_path"],
                            target=params["target"])
 
