@@ -116,6 +116,8 @@ if __name__ == "__main__":
     get_histograms(contribs_path=str(os.path.join(experiment_dir, contrib_path_1)),
                    model_structure=pred.structure[1],
                    save_path=str(os.path.join(experiment_dir, hist_path_1)))
+
+    logger.info(f"Created first histogram at {str(os.path.join(experiment_dir, hist_path_1))}")
     # endregion
 
     # region 2. Second histogram
@@ -141,6 +143,9 @@ if __name__ == "__main__":
     get_histograms(contribs_path=str(os.path.join(experiment_dir, contrib_path_2)),
                    model_structure=pred.structure[1],
                    save_path=str(os.path.join(experiment_dir, hist_path_2)))
+
+    logger.info(f"Created second histogram at {str(os.path.join(experiment_dir, hist_path_2))}")
+
     # endregion
 
     # region 2. Extract CPL
@@ -170,6 +175,8 @@ if __name__ == "__main__":
                                     hist_path=str(os.path.join(experiment_dir, hist_path_1)),
                                     save_path=str(os.path.join(experiment_dir, lh_path_1)))
 
+    logger.info(f"Computed CDP of first group at {str(os.path.join(experiment_dir, lh_path_1))}")
+
     lh_path_2 = get_file_name(filetype="lh",
                               dict_sc_str=map_sc_str,
                               dict_oc_str=map_oc_str,
@@ -180,4 +187,7 @@ if __name__ == "__main__":
     compute_single_class_likelihood(contribs_path=str(os.path.join(experiment_dir, contrib_path_lh)),
                                     hist_path=str(os.path.join(experiment_dir, hist_path_2)),
                                     save_path=str(os.path.join(experiment_dir, lh_path_2)))
+
+    logger.info(f"Computed CDP of second group at {str(os.path.join(experiment_dir, lh_path_2))}")
+
     # endregion

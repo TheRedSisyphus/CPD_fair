@@ -15,8 +15,6 @@ from src.utils import parse_args, get_target, get_protec_attr
 
 # Todo : traiter GanSan comme un traitement
 
-# todo : rework logging
-
 def read_parameters(file: str) -> dict[str, Any]:
     """Read parameters file and return python dict with absolute path using config file"""
     base_dir = os.path.dirname(file)
@@ -96,6 +94,8 @@ if __name__ == "__main__":
                 protec_attr=prot_attr,
                 train=True)
 
+    logger.info(f"Train database generated at {params["train"]["save_path"]}")
+
     # endregion
 
     # region MODEL TRAIN
@@ -111,6 +111,8 @@ if __name__ == "__main__":
                       train_loader=load['train_db']['train'],
                       valid_loader=load['train_db']['valid'])
 
+    logger.info(f"Model trained and saved at {params["model"]["save_path"]}")
+
     # endregion
 
     # region DB TEST
@@ -122,6 +124,8 @@ if __name__ == "__main__":
                 protec_attr=prot_attr,
                 train=False)
 
+    logger.info(f"Train database generated at {params["test"]["save_path"]}")
+
     # endregion
 
     # region write indexes
@@ -131,4 +135,7 @@ if __name__ == "__main__":
                         test_path=params["model"]["test_path"],
                         sn_path=params["model"]["set_name_path"],
                         pa_path=params["model"]["pa_path"])
+
+    logger.info(f"Indexes generated at {params["index_path"]}")
+
     # endregion

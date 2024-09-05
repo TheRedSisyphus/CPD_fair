@@ -1,12 +1,7 @@
 import argparse
-import os
 
 import pandas as pd
 
-import config.parameters as p
-from config.logger import create_logger
-
-logger = create_logger(name=os.path.basename(__file__), level=p.LOG_LEVEL)
 ATTR_INFO = tuple[str, dict[float: pd.Series], dict[float: pd.Series]] | str
 
 

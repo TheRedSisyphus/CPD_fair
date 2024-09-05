@@ -16,6 +16,8 @@ from config.logger import create_logger
 from config.parameters import EPSILON_PREC
 from src.readers import file_reader
 
+logger = create_logger(name=os.path.basename(__file__), level=p.LOG_LEVEL)
+
 
 def filter_indexes(indexes_array: list[list[str]],
                    set_name: str | None,
@@ -31,7 +33,6 @@ def filter_indexes(indexes_array: list[list[str]],
     If sensitive_class is a list, filter all input that have sc in this list
     :return: A list of ID of input filtered
     """
-    logger = create_logger(name=os.path.basename(__file__), level=p.LOG_LEVEL)
     filtered = indexes_array.copy()
     if set_name != '' and set_name is not None:
         filtered = [line for line in filtered if line[p.set_name_pos] == set_name]
@@ -146,7 +147,6 @@ class Predictor(nn.Module):
                     save_path: str,
                     validation_rate: int = 5,
                     plot: bool = True) -> None:
-        logger = create_logger(name=os.path.basename(__file__), level=p.LOG_LEVEL, file_dir=os.path.dirname(save_path))
         if epochs <= 0:
             torch.save(
                 {"state_dict": self.state_dict(),
@@ -174,7 +174,8 @@ class Predictor(nn.Module):
                     plot_data["val_loss"].append(val_loss)
                     plot_data["val_accuracy"].append(val_acc)
 
-                    logger.debug(f"Epoch {epoch} | Validation loss : {val_loss:.2f} | Accuracy : {val_acc * 100:.2f}%")
+                    logger.debug(
+                        f"Epoch {epoch} | Validation loss : {val_loss:.2f} | Accuracy : {val_acc * 100:.2f}%")
 
                     if val_loss < best_val_loss:
                         torch.save(
@@ -225,11 +226,7 @@ class Predictor(nn.Module):
                                              os.path.basename(save_path)[:-3] + '.png')
                 fig.savefig(save_path_fig, dpi=300)
 
-    def test(self, loader: DataLoader, log_path: str = None) -> tuple[torch.Tensor | None, torch.Tensor]:
-        logger = None
-        if log_path is not None:
-            logger = create_logger(name=os.path.basename(__file__), level=p.LOG_LEVEL,
-                                   file_dir=os.path.dirname(log_path))
+    def test(self, loader: DataLoader) -> tuple[torch.Tensor | None, torch.Tensor]:
         self.eval()
         with torch.no_grad():
             for inputs, labels in loader:
@@ -241,9 +238,8 @@ class Predictor(nn.Module):
                 correct_pred_mask = torch.eq(predicted, labels)
 
                 # Print accuracy on current loader
-                if log_path is not None:
-                    logger.debug(
-                        f'Accuracy on current loader is {float(((labels == predicted) * 1.0).mean()) * 100:.2f} %')
+                logger.debug(
+                    f'Accuracy on current loader is {float(((labels == predicted) * 1.0).mean()) * 100:.2f} %')
 
             return act_level, correct_pred_mask
 
@@ -296,7 +292,7 @@ class Predictor(nn.Module):
                                           target=target)
 
             set_name = pd.read_csv(sn_path, index_col='inputId').squeeze().tolist()
-            _, pred_correct = self.test(data_loader['test_db']['all'], log_path=os.path.dirname(save_path))
+            _, pred_correct = self.test(data_loader['test_db']['all'])
             predicted_class = [int(not bool(pred_correct[i]) ^ bool(true_class[i])) for i in range(len(input_id))]
 
             protec_attr = pd.read_csv(pa_path, index_col='inputId').squeeze().astype(int).tolist()
@@ -349,7 +345,6 @@ class Predictor(nn.Module):
 
 def load_model(model_path: str) -> OrderedDict:
     """From model save path (.pt file), get the model parameters"""
-    logger = create_logger(name=os.path.basename(__file__), level=p.LOG_LEVEL, file_dir=os.path.dirname(model_path))
     with warnings.catch_warnings(action="ignore"):  # Raises a FutureWarning
         best_model = torch.load(model_path, map_location=torch.device('cpu'))
     try:

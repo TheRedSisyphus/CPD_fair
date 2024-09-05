@@ -17,6 +17,14 @@ set_name_path = "set_name.csv"
 protec_attr_path = "protec_attr_index.csv"
 # endregion
 
+# region LOGGING
+# general level for logging. To specify log_level by file, use LOGLEVEL = None and specify new levels file wise
+LOG_LEVEL = "info"
+# Logging format : default format display level, date, time and message
+LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+# LOG_FORMAT = "%(message)s"
+# endregion
+
 # region CALCULATIONS
 
 # Number of decimal to display (round number after 5th decimal)
@@ -41,12 +49,6 @@ LSP_PREC = int(abs(math.log10(LOW_SMOOTHED_PROB)))  # = 15
 # endregion
 
 # region FILE MANAGEMENT
-
-# general level for logging. To specify log_level by file, use LOGLEVEL = None and specify new levels file wise
-LOG_LEVEL = "info"
-# Logging format : default format display level, date, time and message
-LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-# LOG_FORMAT = "%(message)s"
 
 indexes_header = ['inputId', 'TrueClass', 'PredictedClass', 'SensitiveAttr', 'SetName']
 input_id_pos = 0
