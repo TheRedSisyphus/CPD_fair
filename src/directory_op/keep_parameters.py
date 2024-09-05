@@ -1,7 +1,5 @@
 import os
 
-base_dir = ""
-
 
 # Delete all files in a directory, except file named pattern
 
@@ -16,4 +14,4 @@ def delete_files(path: str, pattern: str = "parameters.json"):
 
 
 if __name__ == "__main__":
-    delete_files(base_dir)
+    delete_files("")
