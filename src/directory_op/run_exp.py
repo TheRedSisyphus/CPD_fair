@@ -12,11 +12,13 @@ def run_exps(exp_list: int | Iterable[int], result_list: int | Iterable[int], mo
         exp_list = [exp_list]
     if isinstance(result_list, int):
         result_list = [result_list]
-    if not isinstance(mode, set):
+    if isinstance(mode, str):
         if mode == 'all':
             mode = {'prep_exp', 'CPDExtract', 'lh_repr'}
         else:
             mode = {mode}
+    else:
+        mode = set(mode)
     if not set(mode).issubset(['prep_exp', 'CPDExtract', 'lh_repr']):
         raise ValueError("mode arg must be a subset of ['prep_exp', 'CPDExtract', 'lh_repr']")
 
@@ -44,6 +46,6 @@ def run_exps(exp_list: int | Iterable[int], result_list: int | Iterable[int], mo
 
 
 if __name__ == "__main__":
-    run_exps(exp_list=[2, 3, 4, 5, 6, 7],
+    run_exps(exp_list=[36],
              result_list=[1, 2],
-             mode="lh_repr")
+             mode=["prep_exp", 'CPDExtract'])
