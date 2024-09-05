@@ -105,7 +105,7 @@ def get_map_str(params: dict[str, str]) -> tuple[dict[str, str], dict[str, str]]
     # region sensitive attribute
     if params['sens_attr'] == 'sex':
         map_sc_str = {"0": "f", "1": "m"}
-    elif params['sens_attr'] == 'educ':
+    elif params['sens_attr'] == 'education-num':
         map_sc_str = {"0": "le", "1": "he"}
     elif params['sens_attr'] == 'race':
         map_sc_str = {"0": "nwhite", "1": "white"}
