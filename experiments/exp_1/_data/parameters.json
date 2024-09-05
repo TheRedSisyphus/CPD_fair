@@ -1,0 +1,16 @@
+{
+  "work_db": "adult",
+  "protec_attr": "sex=1.0",
+  "train": {"treatment": {}, "remove_protec_attr": {}},
+  "model": {
+    "dimensions": [
+      103,
+      128,
+      128,
+      2
+    ],
+    "lr": 0.001,
+    "epochs": 100
+  },
+  "test": {"treatment": {}, "remove_protec_attr": {}}
+}
