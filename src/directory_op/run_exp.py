@@ -46,6 +46,9 @@ def run_exps(exp_list: int | Iterable[int], result_list: int | Iterable[int], mo
 
 
 if __name__ == "__main__":
-    run_exps(exp_list=[36],
-             result_list=[1, 2],
-             mode=["prep_exp", 'CPDExtract'])
+    run_exps(exp_list=[],
+             result_list=[],
+             mode=[])
+
+# ['prep_exp', 'CPDExtract']
+# 'lh_repr'
