@@ -44,6 +44,6 @@ def run_exps(exp_list: int | Iterable[int], result_list: int | Iterable[int], mo
 
 
 if __name__ == "__main__":
-    run_exps(exp_list=2,
+    run_exps(exp_list=[2, 3, 4, 5, 6, 7],
              result_list=[1, 2],
-             mode="all")
+             mode="lh_repr")
