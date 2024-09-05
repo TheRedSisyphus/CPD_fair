@@ -40,8 +40,7 @@ def disparate_impact_remover(data: pd.DataFrame, target: str, protec_attr: ATTR_
 
     attr_name, _, _ = protec_attr
 
-    new_data = data.drop(columns="inputId", inplace=False)
-    standard_data = StandardDataset(df=new_data,
+    standard_data = StandardDataset(df=data,
                                     label_name=target,
                                     protected_attribute_names=[attr_name],
                                     favorable_classes=[1.0],  # Label that is considered as positive
@@ -50,7 +49,7 @@ def disparate_impact_remover(data: pd.DataFrame, target: str, protec_attr: ATTR_
     dir_ = DisparateImpactRemover(sensitive_attribute=attr_name)
     data_dir = dir_.fit_transform(standard_data)
     data_dir, _ = data_dir.convert_to_dataframe()
-    data_dir = data_dir[list(new_data.columns)]
+    data_dir = data_dir[list(data.columns)]
     return data_dir
 
 
