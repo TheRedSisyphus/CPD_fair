@@ -2,25 +2,15 @@ import json
 import os
 from typing import Any
 
-
 import config.parameters as p
 from config.logger import create_logger
 from src.operations.predictor import Predictor, get_data_loader
 from src.operations.preprocess import generate_db
-from src.utils import parse_args, get_target, get_protec_attr
+from src.utils import parse_args, get_target
 
 
-# Todo : gérer le cas où l'attribut sensible est retiré des données d'entraînement et de test (mais gardé en mémoire)
-#  C'est une dimension supplémentaire, indépendant de la binarisation de l'attribut !!
-
-# Todo : traiter GanSan comme un traitement
-
+# Todo : redo repr file
 # Todo : rework logging in predictor.py
-
-# Todo : CR avant / apres entrainement
-# Todo : DIR avant / apres entrainement
-# Todo : Gansan
-# Todo : Sans attribut sensible
 
 def read_parameters(file: str) -> dict[str, Any]:
     """Read parameters file and return python dict with absolute path using config file"""
@@ -90,15 +80,13 @@ if __name__ == "__main__":
 
     params = read_parameters(args.param)
 
-    prot_attr = get_protec_attr(data_path=params["work_db"], descr=params["protec_attr"])
-
     # region DB TRAIN
 
     generate_db(work_db=params["work_db"],
                 save_path=params["train"]["save_path"],
                 target=params["target"],
                 treatment_param=params["train"],
-                protec_attr=prot_attr,
+                desc_protec=params["protec_attr"],
                 train=True)
 
     logger.info(f"Train database generated at {params["train"]["save_path"]}")
@@ -128,7 +116,7 @@ if __name__ == "__main__":
                 save_path=params["test"]["save_path"],
                 target=params["target"],
                 treatment_param=params["test"],
-                protec_attr=prot_attr,
+                desc_protec=params["protec_attr"],
                 train=False)
 
     logger.info(f"Train database generated at {params["test"]["save_path"]}")

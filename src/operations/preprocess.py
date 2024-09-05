@@ -7,7 +7,7 @@ from sklearn.preprocessing import MinMaxScaler
 
 import config.parameters as p
 from config.logger import create_logger
-from src.utils import ATTR_INFO
+from src.utils import ATTR_INFO, get_protec_attr
 
 logger = create_logger(name=os.path.basename(__file__), level=p.LOG_LEVEL)
 
@@ -18,15 +18,16 @@ def correlation_remover(data: pd.DataFrame, target: str, protec_attr: ATTR_INFO)
 
     attr_name, _, _ = protec_attr
 
-    target_col = data[target]
+    new_data = data.drop(columns="inputId", inplace=False)
+    target_col = new_data[target]
     cr = CorrelationRemover(sensitive_feature_ids=[attr_name])
-    X_cr = cr.fit_transform(data)
-    cr_col = list(data.columns)
+    X_cr = cr.fit_transform(new_data)
+    cr_col = list(new_data.columns)
     cr_col.remove(attr_name)
     X_cr = pd.DataFrame(X_cr, columns=cr_col)
-    X_cr[attr_name] = data[attr_name]
+    X_cr[attr_name] = new_data[attr_name]
     X_cr[target] = target_col
-    X_cr = X_cr[list(data.columns)]
+    X_cr = X_cr[list(new_data.columns)]
     return X_cr
 
 
@@ -40,7 +41,8 @@ def disparate_impact_remover(data: pd.DataFrame, target: str, protec_attr: ATTR_
 
     attr_name, _, _ = protec_attr
 
-    standard_data = StandardDataset(df=data,
+    new_data = data.drop(columns="inputId", inplace=False)
+    standard_data = StandardDataset(df=new_data,
                                     label_name=target,
                                     protected_attribute_names=[attr_name],
                                     favorable_classes=[1.0],  # Label that is considered as positive
@@ -49,7 +51,7 @@ def disparate_impact_remover(data: pd.DataFrame, target: str, protec_attr: ATTR_
     dir_ = DisparateImpactRemover(sensitive_attribute=attr_name)
     data_dir = dir_.fit_transform(standard_data)
     data_dir, _ = data_dir.convert_to_dataframe()
-    data_dir = data_dir[list(data.columns)]
+    data_dir = data_dir[list(new_data.columns)]
     return data_dir
 
 
@@ -103,14 +105,16 @@ def make_categorical(data, lb: int, ub: int) -> pd.DataFrame:
 
 
 def preprocess(data: pd.DataFrame, target_name: str) -> pd.DataFrame:
+    inputId_col = data.index
     data.drop(columns=['SetName', 'inputId'], inplace=True, errors='ignore')
-    data = make_categorical(data, lb=3, ub=5)
+    data = make_categorical(data, lb=3, ub=7)
     data = scale_data(data)
     data = data.astype(float)
 
     # Column order
     target = data.pop(target_name)
     with warnings.catch_warnings(action="ignore"):
+        data.insert(0, 'inputId', inputId_col)
         data.insert(len(data.columns), target_name, target)
     return data
 
@@ -129,18 +133,18 @@ def generate_db(work_db: str | None,
                 save_path: str,
                 target: str,
                 treatment_param: dict[str, str] | None,
-                protec_attr: ATTR_INFO,
+                desc_protec: str,
                 train: bool) -> None:
     """
     :param work_db: Path to the database to work on
     :param save_path:
     :param target :
     :param treatment_param: Python dict, read from JSON file, indicating which treatment to apply
-    :param protec_attr: Index of protec attr value
+    :param desc_protec: Description of protected attr
     :param train: True for training db, false for testing db
     :return: Save a new csv at save_path location
     """
-    data = pd.read_csv(work_db)
+    data = pd.read_csv(work_db, index_col='inputId')
     if train:  # We save set_name before model training
         if 'SetName' not in data:
             set_prop = 0.2
@@ -148,12 +152,14 @@ def generate_db(work_db: str | None,
             data['SetName'] = pd.Series(
                 ['valid'] * int(set_prop * data_length) + ['test'] * int(set_prop * data_length) + ['train'] * int(
                     data_length - 2 * data_length * set_prop))
+            data = data.fillna('train')  # Sometimes, not all input are given a value
 
         set_name = data.pop('SetName')
         save_path_sn = os.path.join(os.path.dirname(save_path), "set_name.csv")
         set_name.to_csv(save_path_sn, index=True, index_label="inputId")
 
     data = preprocess(data=data, target_name=target)
+    protec_attr = get_protec_attr(data_path=data, descr=desc_protec)
     if treatment_param is not None:
         treatment = treatment_param.get("treatment")
         if treatment == "DIR":
@@ -176,4 +182,4 @@ def generate_db(work_db: str | None,
             save_path_pa = os.path.join(os.path.dirname(save_path), "protec_attr_index.csv")
             protec_attr_column.astype(int).to_csv(save_path_pa, index=True, index_label="inputId")
 
-    data.to_csv(save_path, index=True, index_label="inputId")
+    data.to_csv(save_path, index=False, index_label="inputId")
