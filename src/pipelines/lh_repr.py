@@ -114,8 +114,8 @@ def get_area(curve_1: list[tuple[float, float]], curve_2: list[tuple[float, floa
 
     dx_1 = float(np.diff(x_1)[0])
     dx_2 = float(np.diff(x_2)[0])
-    area_1 = np.trapezoid(y_1, dx=dx_1)
-    area_2 = np.trapezoid(y_2, dx=dx_2)
+    area_1 = np.trapz(y_1, dx=dx_1)
+    area_2 = np.trapz(y_2, dx=dx_2)
     return round(area_1 - area_2, p.EPSILON_PREC)
 
 
