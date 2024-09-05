@@ -18,16 +18,15 @@ def correlation_remover(data: pd.DataFrame, target: str, protec_attr: ATTR_INFO)
 
     attr_name, _, _ = protec_attr
 
-    new_data = data.drop(columns="inputId", inplace=False)
-    target_col = new_data[target]
+    target_col = data[target]
     cr = CorrelationRemover(sensitive_feature_ids=[attr_name])
-    X_cr = cr.fit_transform(new_data)
-    cr_col = list(new_data.columns)
+    X_cr = cr.fit_transform(data)
+    cr_col = list(data.columns)
     cr_col.remove(attr_name)
     X_cr = pd.DataFrame(X_cr, columns=cr_col)
-    X_cr[attr_name] = new_data[attr_name]
+    X_cr[attr_name] = data[attr_name]
     X_cr[target] = target_col
-    X_cr = X_cr[list(new_data.columns)]
+    X_cr = X_cr[list(data.columns)]
     return X_cr
 
 
@@ -155,6 +154,7 @@ def generate_db(work_db: str | None,
         save_path_sn = os.path.join(os.path.dirname(save_path), "set_name.csv")
         set_name.to_csv(save_path_sn, index=True, index_label="inputId")
 
+    data = preprocess(data=data, target_name=target)
     if treatment_param is not None:
         treatment = treatment_param.get("treatment")
         if treatment == "DIR":
@@ -175,7 +175,6 @@ def generate_db(work_db: str | None,
 
         if train:  # We save protected attr before model training
             save_path_pa = os.path.join(os.path.dirname(save_path), "protec_attr_index.csv")
-            protec_attr_column.to_csv(save_path_pa, index=True, index_label="inputId")
+            protec_attr_column.astype(int).to_csv(save_path_pa, index=True, index_label="inputId")
 
-    data = preprocess(data=data, target_name=target)
     data.to_csv(save_path, index=True, index_label="inputId")
