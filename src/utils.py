@@ -17,11 +17,14 @@ def cross_tab_percent(series_1: pd.Series, series_2: pd.Series):
         lambda row: row.apply(lambda val: f"{val} ({100 * val / len(series_1):.2f}%)"), axis=1)
 
 
-def get_protec_attr(descr: str, data_path: str | None = None) -> ATTR_INFO:
+def get_protec_attr(descr: str, data_path: str | pd.DataFrame | None = None) -> ATTR_INFO:
     if data_path is not None:
-        data = pd.read_csv(data_path)
-        if descr.count("=") == 1:  # Binarized attribute
-            attr, value = descr.split("=")
+        if isinstance(data_path, str):
+            data = pd.read_csv(data_path, index_col='inputId')
+        else:
+            data = data_path
+        if 0 < descr.count("=") <= 2:  # Binarized attribute
+            attr, value = descr.rsplit('=', 1)
             return attr, {value: data[data[attr] == value]['inputId']}, {value: data[data[attr] != value]['inputId']}
         elif descr.count("/") == 1 and descr.count(":") == 1:  # Multiple attribute
             attr, values = descr.split(":")
@@ -31,14 +34,14 @@ def get_protec_attr(descr: str, data_path: str | None = None) -> ATTR_INFO:
         else:
             raise ValueError("Invalid format in parameters file for protected attribute")
     else:
-        if descr.count("=") == 1:
-            attr, value = descr.split("=")
+        if 0 < descr.count("=") <= 2:
+            attr, value = descr.rsplit("=", 1)
             return attr
         elif descr.count("/") == 1 and descr.count(":") == 1:
             attr, values = descr.split(":")
             return attr
         else:
-            raise ValueError("Invalid format in parameters file for protected attribute")
+            raise ValueError(f"Invalid format in parameters file for protected attribute. Got {descr}")
 
 
 # region Data related function : To modify if data get modified
@@ -83,33 +86,5 @@ def get_map_str(params: dict[str, str]) -> tuple[dict[str, str], dict[str, str]]
         raise ValueError(f'Invalid parameters : got sensitive attribute "{params['sens_attr']}"')
     # endregion
     return map_sc_str, map_oc_str
-
-
-# endregion
-
-# region Post processing
-
-class FairnessDataset:
-    def __init__(self,
-                 favorable_label,
-                 unfavorable_label,
-                 protected_attribute_name: str,
-                 target_name: str,
-                 scores: pd.Series,
-                 path: str = None,
-                 df: pd.DataFrame = None):
-        super().__init__()
-        if path is not None and df is not None:
-            raise ValueError
-        elif path is not None:
-            self.df = pd.read_csv(path)
-        elif df is not None:
-            self.df = df
-        self.scores = scores
-        self.favorable_label = favorable_label
-        self.unfavorable_label = unfavorable_label
-        self.protected_attribute_name = protected_attribute_name
-        self.target_name = target_name
-        self.protected_attribute = self.df[protected_attribute_name]
 
 # endregion
