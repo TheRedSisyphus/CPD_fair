@@ -24,20 +24,26 @@ def run_exps(exp_list: int | Iterable[int], result_list: int | Iterable[int], mo
         print(f"\n=== RUNNING EXP {exp} ===")
         print(f"Path : {os.path.join(exp_dir_path, f"exp_{exp}")}\n")
         if "prep_exp" in mode:
-            os.system(
+            return_code = os.system(
                 f"python3 src/pipelines/prep_exp.py -p '{os.path.join(exp_dir_path, f"exp_{exp}", data_dir_name)}/parameters.json'")
+            if return_code != 0:
+                break
         for res in result_list:
             print(f"\n--- RUNNING RESULT {res} ---")
             print(f"Path : {os.path.join(exp_dir_path, f"exp_{exp}", f"results_{res}")}\n")
             if "CPDExtract" in mode:
-                os.system(
+                return_code = os.system(
                     f"python3 src/pipelines/CPDExtract.py -p '{os.path.join(exp_dir_path, f"exp_{exp}", f"results_{res}")}/parameters.json'")
+                if return_code != 0:
+                    break
             if "lh_repr" in mode:
-                os.system(
+                return_code = os.system(
                     f"python3 src/pipelines/lh_repr.py -p '{os.path.join(exp_dir_path, f"exp_{exp}", f"results_{res}")}/repr/parameters.json'")
+                if return_code != 0:
+                    break
 
 
 if __name__ == "__main__":
-    run_exps(exp_list=1,
+    run_exps(exp_list=2,
              result_list=[1, 2],
              mode="all")
