@@ -2,7 +2,7 @@ import argparse
 
 import pandas as pd
 
-ATTR_INFO = tuple[str, dict[float: pd.Series], dict[float: pd.Series]] | str
+ATTR_INFO = tuple[str, pd.Series] | str
 
 
 def parse_args():
@@ -17,28 +17,59 @@ def cross_tab_percent(series_1: pd.Series, series_2: pd.Series):
         lambda row: row.apply(lambda val: f"{val} ({100 * val / len(series_1):.2f}%)"), axis=1)
 
 
-def get_protec_attr(descr: str, data_path: str | pd.DataFrame | None = None) -> ATTR_INFO:
+def get_protec_attr(descr: str, data_path: str | pd.DataFrame | None = None)->ATTR_INFO:
     if data_path is not None:
         if isinstance(data_path, str):
             data = pd.read_csv(data_path, index_col='inputId')
         else:
             data = data_path
-        if 0 < descr.count("=") <= 2:  # Binarized attribute
+        if descr.count("<") == 1:
+            attr, value = descr.split("<")
+            value = float(value)
+            return attr, (data[attr] < value).squeeze().astype(int)
+        elif descr.count("<=") == 1:
+            attr, value = descr.split("<=")
+            value = float(value)
+            return attr, (data[attr] <= value).squeeze().astype(int)
+        if descr.count(">") == 1:
+            attr, value = descr.split(">")
+            value = float(value)
+            return attr, (data[attr] > value).squeeze().astype(int)
+        elif descr.count(">=") == 1:
+            attr, value = descr.split(">=")
+            value = float(value)
+            return attr, (data[attr] >= value).squeeze().astype(int)
+        elif 0 < descr.count("=") <= 2:  # Binarized attribute
             attr, value = descr.rsplit('=', 1)
-            return attr, {value: data[data[attr] == value]['inputId']}, {value: data[data[attr] != value]['inputId']}
+            value = float(value)
+            return attr, (data[attr] == value).squeeze()
         elif descr.count("/") == 1 and descr.count(":") == 1:  # Multiple attribute
             attr, values = descr.split(":")
             value_1, value_2 = descr.split("/")
-            return attr, {value_1: data[data[attr] == value_1]['inputId']}, {
-                value_2: data[data[attr] != value_2]['inputId']}
+            value_1 = float(value_1)
+
+            return attr, data[attr].map({value_1: 1, value_2: 0}).fillna(-1).astype(int)
         else:
             raise ValueError("Invalid format in parameters file for protected attribute")
     else:
+        if descr.count("<") == 1:
+            attr, _ = descr.split("<")
+            return attr
+        elif descr.count("<=") == 1:
+            attr, _ = descr.split("<=")
+            return attr
+        if descr.count(">") == 1:
+            attr, _ = descr.split(">")
+            return attr
+        elif descr.count(">=") == 1:
+            attr, _ = descr.split(">=")
+            return attr
+
         if 0 < descr.count("=") <= 2:
-            attr, value = descr.rsplit("=", 1)
+            attr, _ = descr.rsplit("=", 1)
             return attr
         elif descr.count("/") == 1 and descr.count(":") == 1:
-            attr, values = descr.split(":")
+            attr, _ = descr.split(":")
             return attr
         else:
             raise ValueError(f"Invalid format in parameters file for protected attribute. Got {descr}")
@@ -82,6 +113,8 @@ def get_map_str(params: dict[str, str]) -> tuple[dict[str, str], dict[str, str]]
         map_sc_str = {"0": "young", "1": "old"}
     elif params['sens_attr'] == 'race=African-American':
         map_sc_str = {"1": "afr_amer", "0": "n_afr_amer"}
+    elif params['sens_attr'] == 'race=White':
+        map_sc_str = {"1": "white", "0": "n_white"}
     else:
         raise ValueError(f'Invalid parameters : got sensitive attribute "{params['sens_attr']}"')
     # endregion

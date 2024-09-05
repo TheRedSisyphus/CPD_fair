@@ -171,12 +171,10 @@ def generate_db(work_db: str | None,
         elif treatment == "upsampling":
             raise NotImplementedError
 
+        attr_name, protec_attr_column = protec_attr
         protec_attr_remove = treatment_param.get("remove_protec_attr")
         if protec_attr_remove:  # If the model is not aware of sensitive groups
-            protec_attr_column = data.pop(protec_attr)
-        else:
-            attr_name, _, _ = protec_attr
-            protec_attr_column = data[attr_name]
+            data.pop(protec_attr)
 
         if train:  # We save protected attr before model training
             save_path_pa = os.path.join(os.path.dirname(save_path), "protec_attr_index.csv")
