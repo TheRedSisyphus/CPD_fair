@@ -15,6 +15,8 @@ def delete_files(path: str, pattern: str = "parameters.json"):
 
 
 def copy_dir(source: str, destination: str):
+    if os.path.isdir(destination):
+        raise ValueError(f"Directory {destination} already exists")
     shutil.copytree(src=source, dst=destination,
                     ignore=shutil.ignore_patterns('*.txt',
                                                   '*.png',
