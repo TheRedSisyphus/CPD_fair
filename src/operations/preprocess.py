@@ -62,14 +62,12 @@ def balance_data(data: pd.DataFrame,
     """Only works for binarized attributes !"""
 
     # unpacking
-    attr_name, attr_1, attr_2 = protec_attr
-    value_1: float = attr_1.keys()[0]
-    value_2: float = attr_2.keys()[0]
-    series_1: pd.Series = attr_1[value_1]
-    series_2: pd.Series = attr_2[value_2]
+    attr_name, attr_series = protec_attr
 
     if mode == 'downsampling':
-        min_series: pd.Series = min(series_1, series_2, key=len)
+        df_1 = attr_series[attr_series == 0]
+        df_2 = attr_series[attr_series == 1]
+        min_series = min(df_1, df_2, key=len)
         min_len = len(min_series)
         min_value = min_series.iloc[0]  # value de l'attribut le moins courant
 
@@ -81,6 +79,9 @@ def balance_data(data: pd.DataFrame,
         new_data = pd.concat([new_data, portion], ignore_index=True)  # We add this portion to the result
 
         new_data = new_data.sample(frac=1, random_state=seed)  # Shuffle the dataset
+        # reset index
+        new_data = new_data.reset_index(drop=True)
+        new_data['inputId'] = new_data.index
         return new_data
 
 
@@ -162,7 +163,9 @@ def generate_db(work_db: str | None,
     protec_attr = get_protec_attr(data_path=data, descr=desc_protec)
     if treatment_param is not None:
         treatment = treatment_param.get("treatment")
-        if treatment == "DIR":
+        if treatment is None:
+            pass
+        elif treatment == "DIR":
             data = disparate_impact_remover(data=data, protec_attr=protec_attr, target=target)
         elif treatment == "CR":
             data = correlation_remover(data=data, protec_attr=protec_attr, target=target)
@@ -170,14 +173,16 @@ def generate_db(work_db: str | None,
             data = balance_data(data, protec_attr, mode="downsampling")
         elif treatment == "upsampling":
             raise NotImplementedError
+        else:
+            raise ValueError(f"Invalid treatment parameter, got {treatment}")
 
-        attr_name, protec_attr_column = protec_attr
-        protec_attr_remove = treatment_param.get("remove_protec_attr")
-        if protec_attr_remove:  # If the model is not aware of sensitive groups
-            data.pop(attr_name)
+    attr_name, protec_attr_column = protec_attr
+    protec_attr_remove = treatment_param.get("remove_protec_attr")
+    if protec_attr_remove:  # If the model is not aware of sensitive groups
+        data.pop(attr_name)
 
-        if train:  # We save protected attr before model training
-            save_path_pa = os.path.join(os.path.dirname(save_path), "protec_attr_index.csv")
-            protec_attr_column.astype(int).to_csv(save_path_pa, index=True, index_label="inputId")
+    if train:  # We save protected attr before model training
+        save_path_pa = os.path.join(os.path.dirname(save_path), "protec_attr_index.csv")
+        protec_attr_column.astype(int).to_csv(save_path_pa, index=True, index_label="inputId")
 
     data.to_csv(save_path, index=False, index_label="inputId")
