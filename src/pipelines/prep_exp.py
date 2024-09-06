@@ -48,7 +48,7 @@ def read_parameters(file: str) -> dict[str, Any]:
     param_dict['model']['pa_path'] = os.path.join(base_dir, p.protec_attr_path)
 
     with open(os.path.join(base_dir, "protocol_exp.txt"), mode='w') as protocol:
-        protocol.write("=== GENERAL INFORMATIONS ==\n")
+        protocol.write("=== GENERAL INFORMATION ==\n")
         protocol.write(f"WORK DATABASE : {db_name}\n"
                        f"TASK OF PREDICTION : {param_dict['target']}\n"
                        f"PROTECTED ATTRIBUTE : {param_dict["protec_attr"]}\n")
@@ -56,7 +56,7 @@ def read_parameters(file: str) -> dict[str, Any]:
         if param_dict["train"].get("remove_protec_attr") is True:
             protocol.write("Model not aware of protected group")
 
-        protocol.write("\n=== DATABASE INFORMATIONS ===\n")
+        protocol.write("\n=== DATABASE INFORMATION ===\n")
         if param_dict["train"].get("treatment"):
             protocol.write(f"Train database is treated with : {param_dict["train"].get("treatment")}\n")
         if param_dict["test"].get("treatment"):
@@ -66,7 +66,7 @@ def read_parameters(file: str) -> dict[str, Any]:
         if param_dict["train"].get("treatment") == param_dict["test"].get("treatment"):
             protocol.write("(Train and test get same treatment)\n")
         # Model
-        protocol.write("\n=== MODEL INFORMATIONS ===\n")
+        protocol.write("\n=== MODEL INFORMATION ===\n")
         protocol.write(f"Model dimensions are : {param_dict['model']["dimensions"]}\n")
         protocol.write(f"Model learning rate is : {param_dict['model']["lr"]}\n")
         protocol.write(f"Number of epochs for training model is : {param_dict['model']["epochs"]}\n")
