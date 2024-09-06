@@ -32,7 +32,7 @@ def read_parameters(file: str) -> dict[str, Any]:
     param_dict['test']['save_path'] = os.path.join(base_dir, p.test_data_path)
 
     # If we ignore protec attributes for test or train, then we ignore attr for both
-    if bool(param_dict["train"].get("remove_protec_attr")) != bool(param_dict["train"].get("remove_protec_attr")):
+    if bool(param_dict["train"].get("remove_protec_attr")) != bool(param_dict["test"].get("remove_protec_attr")):
         param_dict["train"]["remove_protec_attr"] = True
         param_dict["test"]["remove_protec_attr"] = True
 
