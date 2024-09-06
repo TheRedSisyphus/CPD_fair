@@ -9,10 +9,6 @@ from src.operations.preprocess import generate_db
 from src.utils import parse_args, get_target
 
 
-# Todo : redo repr file
-# Todo : rework logging in predictor.py
-# Todo : compare old and new version of exp
-
 def read_parameters(file: str) -> dict[str, Any]:
     """Read parameters file and return python dict with absolute path using config file"""
     base_dir = os.path.dirname(file)

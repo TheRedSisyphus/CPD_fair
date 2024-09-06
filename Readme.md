@@ -10,3 +10,11 @@
 # Exp List
 1. Adult
 2. Adult CIR
+
+
+Note : pour credit, categorical ub is 7
+
+Note : L'option remove protec attr ne fonctionne pas avec les attributs catégoriques
+
+# Todo : rework logging in predictor.py
+# Todo : compare old and new version of exp
