@@ -116,7 +116,7 @@ if __name__ == "__main__":
                 desc_protec=params["protec_attr"],
                 train=False)
 
-    logger.info(f"Train database generated at {params["test"]["save_path"]}")
+    logger.info(f"Test database generated at {params["test"]["save_path"]}")
 
     # endregion
 
