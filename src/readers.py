@@ -1,4 +1,4 @@
-import os
+from pathlib import Path
 from typing import Optional
 
 import numpy as np
@@ -6,41 +6,18 @@ import numpy as np
 import config.parameters as p
 from config.logger import create_logger
 
-logger = create_logger(name=os.path.basename(__file__), level=p.LOG_LEVEL)
+logger = create_logger(name=Path(__file__).name, level=p.LOG_LEVEL)
 
 
-def np_file_reader(path: str, header: Optional[tuple[str, ...]] = None) -> np.ndarray:
+def file_reader(path: Path, sep: str = ',', header: Optional[list[str]] = None) -> list[list[str]]:
     """
-    Read the file and returns the structured numpy array containing the file
-    @param path: Path of the file
-    @param header: Optional. If not None, used for verification.
-    @return: Structured numpy array
-    """
-    array = np.genfromtxt(path, encoding='UTF-8', dtype=None, names=True)
-
-    header_names = array.dtype.names
-
-    if header is not None:
-        if header_names != header:
-            raise ValueError(
-                f'ERROR file_reader: Header of file is not the one expected. Got {header} instead of {header_names}')
-
-    if not array.shape:
-        return array
-    if array.shape[0] <= 0:
-        logger.warning(f'Empty file at {path}')
-    return array
-
-
-def file_reader(path: str, sep: str = ' ', header: Optional[list[str]] = None) -> list[list[str]]:
-    """
-    @param path: Path of the file to read
-    @param sep: separator used, default is ' '. For csv files it's ','
-    @param header: Optional. If passed verify that the first line is the same as header.
+    :param path: Path of the file to read
+    :param sep: separator used, default is ','.
+    :param header: Optional. If passed verify that the first line is the same as header.
     If header is [''], file reader skip the first line
-    @return: List of list of string representing the file.
+    :return: List of list of string representing the file.
     """
-    if not os.path.exists(path):
+    if not path.exists():
         raise ValueError(f'ERROR file_reader: Path {path} does not exist')
     with open(path, 'r') as file:
         content = file.readlines()

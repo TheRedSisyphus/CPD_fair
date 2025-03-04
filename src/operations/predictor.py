@@ -1,79 +1,44 @@
 import csv
-import os
+import random
 import warnings
+from pathlib import Path
 from typing import OrderedDict
 
 import numpy as np
-import pandas as pd
 import torch
 from matplotlib import pyplot as plt
-from pandas import DataFrame
 from torch import nn
-from torch.utils.data import DataLoader, TensorDataset
+from torch.utils.data import DataLoader
 
 import config.parameters as p
 from config.logger import create_logger
 from config.parameters import EPSILON_PREC
 from src.readers import file_reader
+from src.utils import filter_indexes
 
-logger = create_logger(name=os.path.basename(__file__), level=p.LOG_LEVEL)
-
-
-def filter_indexes(indexes_array: list[list[str]],
-                   set_name: str | None,
-                   correct: str | bool | None,
-                   output_class: str | list[str] | None,
-                   sensitive_class: str | list[str] | None) -> list[int]:
-    """
-    :param indexes_array: Unfiltered indexes to read
-    :param set_name: None, '', 'train', 'test', 'valid'. The name of the set to filter
-    :param correct: None, '', 'true',True, 'false', False. Filter input where model prediction is correct/incorrect
-    :param output_class: Output class to filter. If output_class is a list, filter all input that have oc in this list
-    :param sensitive_class: Sensitive class to filter.
-    If sensitive_class is a list, filter all input that have sc in this list
-    :return: A list of ID of input filtered
-    """
-    filtered = indexes_array.copy()
-    if set_name != '' and set_name is not None:
-        filtered = [line for line in filtered if line[p.set_name_pos] == set_name]
-    if correct in [True, 'true']:
-        filtered = [line for line in filtered if line[p.true_class_pos] == line[p.pred_class_pos]]
-    elif correct in [False, 'false']:
-        filtered = [line for line in filtered if line[p.true_class_pos] != line[p.pred_class_pos]]
-
-    if isinstance(output_class, str):
-        output_class = [output_class]
-    if isinstance(output_class, list):
-        filtered = [line for line in filtered if line[p.true_class_pos] in output_class]
-    if isinstance(sensitive_class, str):
-        sensitive_class = [sensitive_class]
-    if isinstance(sensitive_class, list):
-        filtered = [line for line in filtered if line[p.sens_attr_pos] in sensitive_class]
-
-    if len(filtered) <= 0:
-        logger.warning(
-            f'No indexes after filtering{" for " + set_name + " set" if set_name else ""},{" output class : " + str(output_class) if output_class else ""}{" sensitive class : " + str(sensitive_class) if sensitive_class else ""}')
-        return []
-
-    return [int(line[p.input_id_pos]) for line in filtered]
+logger = create_logger(name=Path(__file__).name, level=p.LOG_LEVEL)
 
 
 class Predictor(nn.Module):
+    """Class used to make predictions on a dataset"""
+
     def __init__(self,
                  dimensions: list[int] | OrderedDict | None,
-                 criterion=nn.NLLLoss(),
+                 criterion=None,
                  regist_act_level=False,
                  lr=None,
-                 seed=987654321):
+                 seed=987654321,
+                 c_weight: list[float] = None):
 
         super().__init__()
 
-        self.regist_act_level = regist_act_level
+        self.regist_act_level = regist_act_level  # If we register activation levels during inference
 
-        # Default value
+        # Default value for learning rate
         if lr is None:
             lr = 0.01
 
+        # Structure is the list of dimensions (number of neuron) for each layer of the model
         if isinstance(dimensions, OrderedDict):
             self.structure = get_model_structure(dimensions)
         elif isinstance(dimensions, list):
@@ -99,10 +64,20 @@ class Predictor(nn.Module):
         self.output = nn.Sequential(*output_layers)
 
         if isinstance(dimensions, OrderedDict):
-            self.load_state_dict(dimensions)  # Generate a UserWarning
+            self.load_state_dict(dimensions)
 
+        if criterion is None:
+            if c_weight is not None:
+                # c_weight is the classes weights, converted to double
+                criterion = nn.NLLLoss(weight=torch.tensor(c_weight).double())
+            else:
+                criterion = nn.NLLLoss()
         self.criterion = criterion
         self.optimizer = torch.optim.AdamW(self.parameters(), lr=lr)
+
+        # Todo : regulation
+        self.lambda_reg = None  # HP used for regulation
+        self.regularization = None
 
     def activate_registration(self):
         self.regist_act_level = True
@@ -111,6 +86,7 @@ class Predictor(nn.Module):
         self.regist_act_level = False
 
     def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor | None]:
+        """Inference function on a torch Tensor"""
         if self.regist_act_level:
             hidden_data = self.seq(x)
             return self.output(hidden_data), hidden_data
@@ -119,6 +95,7 @@ class Predictor(nn.Module):
             return self.output(hidden_data), None
 
     def train_one_epoch(self, train_loader: DataLoader) -> tuple[float, float]:
+        """Train one epoch of the model"""
         self.train()
         running_loss = 0.0
         acc = 0.0
@@ -128,6 +105,13 @@ class Predictor(nn.Module):
             pred, _ = self.forward(inputs)
             # Compute loss
             loss = self.criterion(pred, labels)
+            if self.regularization == "L1":
+                l1_norm = sum(param.abs().sum() for param in self.parameters())
+                loss += self.lambda_reg * l1_norm
+            elif self.regularization == "L2":
+                l2_norm = sum(param.pow(2).sum() for param in self.parameters())
+                loss += self.lambda_reg * l2_norm
+
             # Clear out the gradients of all variables of the optimizer
             self.optimizer.zero_grad()
             # Compute gradient loss
@@ -147,6 +131,8 @@ class Predictor(nn.Module):
                     save_path: str,
                     validation_rate: int = 5,
                     plot: bool = True) -> None:
+        """Train the model (call train_one_epoch 'epochs' time). Plot accuracy and loss evolution"""
+        logger.info("Training model...")
         if epochs <= 0:
             torch.save(
                 {"state_dict": self.state_dict(),
@@ -204,7 +190,6 @@ class Predictor(nn.Module):
                     f"Best model saved with validation accuracy {plot_data['val_accuracy'][epoch_of_best // validation_rate - 1] * 100:.2f}%")
 
             if plot:
-                # Plot
                 fig, (ax1, ax2) = plt.subplots(2, sharex=True)
                 fig.set_size_inches(12, 7)
                 ax1.plot([x for x in range(1, epochs + 1) if x % validation_rate != 0], plot_data["train_loss"],
@@ -222,11 +207,11 @@ class Predictor(nn.Module):
                 ax2.legend()
                 ax2.set_xlabel('Number of epochs')
 
-                save_path_fig = os.path.join(os.path.split(save_path)[0],
-                                             os.path.basename(save_path)[:-3] + '.png')
-                fig.savefig(save_path_fig, dpi=300)
+                save_path_fig = Path(save_path).with_suffix('.pdf')
+                fig.savefig(save_path_fig, dpi=300, format='pdf')
 
     def test(self, loader: DataLoader) -> tuple[torch.Tensor | None, torch.Tensor]:
+        """Inference of the model on torch Dataloader"""
         self.eval()
         with torch.no_grad():
             for inputs, labels in loader:
@@ -243,7 +228,8 @@ class Predictor(nn.Module):
 
             return act_level, correct_pred_mask
 
-    def get_precision(self, loader: DataLoader) -> float:
+    def get_accuracy(self, loader: DataLoader) -> float:
+        """Return model accuracy on torch Dataloader"""
         self.eval()
         with torch.no_grad():
             for inputs, labels in loader:
@@ -256,6 +242,7 @@ class Predictor(nn.Module):
             return float(((labels == predicted) * 1.0).mean())
 
     def get_model_decision(self, data_loader: DataLoader) -> torch.Tensor:
+        """Returns model score inferred on torch Dataloader"""
         self.eval()
         model_decision = torch.empty((0,))
         with torch.no_grad():
@@ -266,6 +253,7 @@ class Predictor(nn.Module):
         return model_decision
 
     def get_activation_levels(self, data_loader: DataLoader) -> np.ndarray:
+        """Return activation levels on torch Dataloader"""
         self.activate_registration()
         levels_list = []
         levels_loader, _ = self.test(data_loader)
@@ -278,37 +266,16 @@ class Predictor(nn.Module):
         self.deactivate_registration()
         return levels
 
-    def write_indexes(self, save_path: str, train_path: str, sn_path: str, test_path: str, target: str, pa_path: str):
-        with open(save_path, 'w', newline='') as csvfile:
-            writer = csv.writer(csvfile, delimiter=' ')
-            writer.writerow(['inputId', 'TrueClass', 'PredictedClass', 'SensitiveAttr', 'SetName'])
-            data = pd.read_csv(test_path, index_col='inputId')
-
-            input_id = data.index.tolist()
-            true_class = data[target].astype(int).tolist()
-            data_loader = get_data_loader(train_data_path=train_path,
-                                          test_data_path=test_path,
-                                          set_name_path=sn_path,
-                                          target=target)
-
-            set_name = pd.read_csv(sn_path, index_col='inputId').squeeze().tolist()
-            _, pred_correct = self.test(data_loader['test_db']['all'])
-            predicted_class = [int(not bool(pred_correct[i]) ^ bool(true_class[i])) for i in range(len(input_id))]
-
-            protec_attr = pd.read_csv(pa_path, index_col='inputId').squeeze().astype(int).tolist()
-
-            for i, input_id in enumerate(input_id):
-                writer.writerow([input_id, true_class[i], predicted_class[i], protec_attr[i], set_name[i]])
-
     def save_activation_levels(self,
-                               index_path: str,
+                               index_path: Path,
                                data_loader: DataLoader,
-                               save_path: str,
+                               save_path: Path,
                                layer_id: int,
                                set_name: str | None = None,
                                correct: str | bool | None = None,
                                output_class: str | list[str] | None = None,
-                               sensitive_class: str | list[str] | None = None):
+                               sensitive_class: str | list[str] | None = None,
+                               rand: bool = False):
         """
         Write node contrib file
         :param index_path: Path to where indexes file is stored
@@ -319,6 +286,7 @@ class Predictor(nn.Module):
         :param correct: To filter if the model prediction is right
         :param output_class: To filter output class
         :param sensitive_class: To filter sensitive class
+        :param rand: If true, select two randoms part of the contributions (only use for plot node hist)
         :return: Write in file a four column document : 'inputId', 'layerId', 'nodeId', 'nodeContrib'
         """
         act_levels = self.get_activation_levels(data_loader)
@@ -327,23 +295,55 @@ class Predictor(nn.Module):
 
         indexes = file_reader(path=index_path, header=p.indexes_header)
 
+        act_levels_index = filter_indexes(indexes, set_name=set_name)
+        if len(act_levels_index) != act_levels.shape[0]:
+            raise ValueError(
+                f"Train loader et indexes have different size : {act_levels.shape[0]} and {act_levels_index}")
+
         id_list = filter_indexes(indexes,
                                  set_name=set_name,
                                  correct=correct,
                                  output_class=output_class,
                                  sensitive_class=sensitive_class)
 
-        with open(save_path, 'w', newline='') as csvfile:
-            writer = csv.writer(csvfile, delimiter=' ')
-            writer.writerow(p.contribs_header)
+        if rand:
+            random.shuffle(id_list)
+            id_list_a = id_list[0::2]
+            id_list_b = id_list[1::2]
 
-            for input_id in id_list:
-                for node_id in range(act_levels.shape[1]):
-                    node_contrib = act_levels[input_id][node_id].item()
-                    writer.writerow([input_id, layer_id, node_id, f'{node_contrib:.10f}'])
+            with open(save_path.with_name("random_section_a").with_suffix('.csv'), 'w', newline='') as csvfile:
+                writer = csv.writer(csvfile)
+                writer.writerow(p.contribs_header)
+
+                for i, input_id in enumerate(act_levels_index):
+                    if input_id in id_list_a:
+                        for node_id in range(act_levels.shape[1]):
+                            node_contrib = act_levels[i][node_id].item()
+                            writer.writerow([input_id, layer_id, node_id, f'{node_contrib:.10f}'])
+
+            with open(save_path.with_name("random_section_b").with_suffix('.csv'), 'w', newline='') as csvfile:
+                writer = csv.writer(csvfile)
+                writer.writerow(p.contribs_header)
+
+                for i, input_id in enumerate(act_levels_index):
+                    if input_id in id_list_b:
+                        for node_id in range(act_levels.shape[1]):
+                            node_contrib = act_levels[i][node_id].item()
+                            writer.writerow([input_id, layer_id, node_id, f'{node_contrib:.10f}'])
+
+        else:
+            with open(save_path, 'w', newline='') as csvfile:
+                writer = csv.writer(csvfile)
+                writer.writerow(p.contribs_header)
+
+                for i, input_id in enumerate(act_levels_index):
+                    if input_id in id_list:
+                        for node_id in range(act_levels.shape[1]):
+                            node_contrib = act_levels[i][node_id].item()
+                            writer.writerow([input_id, layer_id, node_id, f'{node_contrib:.10f}'])
 
 
-def load_model(model_path: str) -> OrderedDict:
+def load_model(model_path: Path) -> OrderedDict:
     """From model save path (.pt file), get the model parameters"""
     with warnings.catch_warnings(action="ignore"):  # Raises a FutureWarning
         best_model = torch.load(model_path, map_location=torch.device('cpu'))
@@ -366,47 +366,3 @@ def get_model_structure(model_param: OrderedDict) -> (int, list[int], int):
     output_dim = int(struct[-1][0])
     struct = [int(layer[1]) for layer in struct[1:]]
     return input_dim, struct, output_dim
-
-
-def dataframe_to_loader(df: DataFrame, target: str, ) -> DataLoader:
-    """Convert pandas dataframe to dataloader. Remove inputId column before processing"""
-    features = torch.tensor(df.drop([target], axis=1).values)
-    target_values = torch.tensor(df[target].values)
-    dataset = TensorDataset(features, target_values)
-    data_loader = DataLoader(dataset, batch_size=df.shape[0], shuffle=False)
-    return data_loader
-
-
-def get_data_loader(train_data_path: str,
-                    test_data_path: str | None,
-                    set_name_path: str,
-                    target: str) -> dict[str, dict[str, DataLoader]]:
-    """
-    To get the Dataloader of all preprocessed data, in a dict separated by set name (all, train, test, valid...)
-    :return: A dict with key 'all', <other_set_name>. Each value corresponds to the loader of the key.
-    Value of key 'all' is a dataloader of all data
-    """
-
-    set_name = pd.read_csv(set_name_path, index_col='inputId')
-    set_name = set_name.squeeze()  # converting to pandas Series
-
-    train_data = pd.read_csv(train_data_path, index_col='inputId')
-    loaders = {"train_db": {"all": dataframe_to_loader(train_data, target=target)}}
-    if test_data_path is not None:
-        test_data = pd.read_csv(test_data_path, index_col='inputId')
-        loaders["test_db"] = {"all": dataframe_to_loader(test_data, target=target)}
-
-    # Create smaller loaders for each set
-    for set_n in set_name.unique():  # squeeze is to convert pd.Dataframe to pd.Series
-        # Filter data of set set_n
-        df_train = train_data[set_name == set_n]
-        # Create data loader
-        train_data_loader = dataframe_to_loader(df=df_train, target=target)
-        loaders["train_db"][set_n] = train_data_loader
-
-        if test_data_path is not None:
-            df_test = test_data[set_name == set_n]
-            test_data_loader = dataframe_to_loader(df=df_test, target=target)
-            loaders["test_db"][set_n] = test_data_loader
-
-    return loaders

@@ -1,11 +1,11 @@
 import json
-import os
+from pathlib import Path
 from typing import Callable
 
 from config.parameters import project_path
 
 
-def change_param(path: str, change_repr: bool, key_to_change: str, action_to_perform: Callable) -> None:
+def change_param(path: Path, change_repr: bool, key_to_change: str, action_to_perform: Callable) -> None:
     """
     :param path: Path to the dir containing multiple experiments dir
     :param change_repr: Bool. If true, only change parameters inside repr directory.
@@ -14,21 +14,21 @@ def change_param(path: str, change_repr: bool, key_to_change: str, action_to_per
     :param action_to_perform: See below
     :return: Nothing, but modify parameters.json files found
     """
-    path = os.path.join(project_path, path)
+    path = project_path / path
     parameters_path = None
-    for exp_dir in os.listdir(path):
-        exp_dir_path = os.path.join(path, exp_dir)
-        if os.path.isdir(exp_dir_path):
-            for filename in os.listdir(exp_dir_path):
-                file_path = os.path.join(exp_dir_path, filename)
+    for exp_dir in path.iterdir():
+        exp_dir_path = path / exp_dir
+        if exp_dir_path.is_dir():
+            for filename in exp_dir_path.iterdir():
+                file_path = exp_dir_path / filename
                 if change_repr:
-                    if os.path.isdir(file_path):
-                        if filename == "repr":
-                            for param_file in os.listdir(file_path):
-                                if param_file == "parameters.json":
-                                    parameters_path = os.path.join(file_path, param_file)
+                    if file_path.is_dir():
+                        if filename.name == "repr":
+                            for param_file in file_path.iterdir():
+                                if param_file.name == "parameters.json":
+                                    parameters_path = file_path / param_file
                 else:
-                    if os.path.isfile(file_path) and filename == "parameters.json":
+                    if file_path.is_file() and filename.name == "parameters.json":
                         parameters_path = file_path
 
             if parameters_path is None:
@@ -67,7 +67,7 @@ def swap_keys(key_to_swap):
 # endregion
 
 if __name__ == "__main__":
-    change_param(path="/Users/benjamindjian/Desktop/Maîtrise/code/CPDExtract/experiments/adult/adult_sex/blah",
+    change_param(path=Path("/Users/benjamindjian/Desktop/Maîtrise/code/CPDExtract/AAAH/exp_6010"),
                  change_repr=False,
-                 key_to_change="",
-                 action_to_perform=update_key(""))
+                 key_to_change="model",
+                 action_to_perform=update_key("proutel"))

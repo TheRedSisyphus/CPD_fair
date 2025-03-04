@@ -1,5 +1,5 @@
 import csv
-import os
+from pathlib import Path
 from statistics import pstdev
 
 import numpy as np
@@ -8,13 +8,20 @@ import config.parameters as p
 from config.logger import create_logger
 from src.readers import file_reader
 
-logger = create_logger(name=os.path.basename(__file__), level=p.LOG_LEVEL)
+logger = create_logger(name=Path(__file__).name, level=p.LOG_LEVEL)
 
 
 def construct_hist(layer_id: str,
                    node_id: str,
                    act_levels: list[str],
-                   save_path: str) -> None:
+                   save_path: Path) -> None:
+    """
+    :param layer_id: Which layer of the model to consider (usually the one before the last)
+    :param node_id: Which neuron of the layer to consider
+    :param act_levels: Activation levels for this specific neuron
+    :param save_path: Where to save results
+    :return: Save histogram of a given neuron of a model
+    """
     nbr_act_levels = len(act_levels)
 
     if nbr_act_levels <= 0 or '' in act_levels:
@@ -46,7 +53,7 @@ def construct_hist(layer_id: str,
         )
     # We append file since the header is already written
     with open(save_path, 'a', newline='') as csvfile:
-        csvwriter = csv.writer(csvfile, delimiter=' ')
+        csvwriter = csv.writer(csvfile)
         # Standard dev is null (no variance)
         if -p.EPSILON <= sigma < p.EPSILON:
             str_single_value = f"{min_:.10f}"
@@ -105,7 +112,13 @@ def construct_hist(layer_id: str,
                 raise ValueError(f'ERROR construct_hist: There are {nbr_act_levels} inputs, but hist contains {count}')
 
 
-def get_histograms(contribs_path: str, model_structure: list[int], save_path: str) -> None:
+def get_histograms(contribs_path: Path, model_structure: list[int], save_path: Path) -> None:
+    """
+    :param contribs_path: Path to the csv files of model activation levels
+    :param model_structure: Structure of the model studied
+    :param save_path: Where to save results
+    :return: Save histograms of activation levels for each neuron in the model
+    """
     # Getting model structure
     # We consider the last hidden layer
     layer_id = len(model_structure) - 1
@@ -117,7 +130,7 @@ def get_histograms(contribs_path: str, model_structure: list[int], save_path: st
     contribs = file_reader(contribs_path, header=p.contribs_header)
 
     with open(save_path, 'w', newline='') as csvfile:
-        csvwriter = csv.writer(csvfile, delimiter=' ')
+        csvwriter = csv.writer(csvfile)
         csvwriter.writerow(p.hist_header)
 
     if len(contribs) == 0:

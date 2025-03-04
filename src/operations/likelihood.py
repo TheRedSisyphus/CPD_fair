@@ -1,20 +1,20 @@
 import csv
 import math
-import os
 import re
 from itertools import zip_longest
+from pathlib import Path
 
 import config.parameters as p
 from config.logger import create_logger
 
-logger = create_logger(name=os.path.basename(__file__), level=p.LOG_LEVEL)
+logger = create_logger(name=Path(__file__).name, level=p.LOG_LEVEL)
 
 nk_type = tuple[int, int]
 table_type = dict[nk_type, float]
 prob_table_type = dict[nk_type, dict[int, float]]
 
 
-def get_hist_tables(hist: str) -> tuple[table_type, table_type, prob_table_type]:
+def get_hist_tables(hist: Path) -> tuple[table_type, table_type, prob_table_type]:
     """
     :param hist: Path to where the histogram file is saved
     :return: Three python dictionaries.
@@ -36,7 +36,7 @@ def get_hist_tables(hist: str) -> tuple[table_type, table_type, prob_table_type]
     with open(hist, 'r') as h:
         for no_line, line in enumerate(h):
             line = re.sub('\n$', '', line)
-            words = line.split()
+            words = line.split(sep=',')
             if no_line == 0:
                 if len(words) != SIG_EXPECTED_LINE_LEN:
                     raise ValueError(
@@ -166,7 +166,7 @@ def get_hist_tables(hist: str) -> tuple[table_type, table_type, prob_table_type]
     return lb_table, step_table, prob_table
 
 
-def entry_iterator(contribs_path: str):
+def entry_iterator(contribs_path: Path):
     """
     :param contribs_path: The string of the path where the nodes contributions are stored
     :return: Yield a tuple (input_id:str, node_contribution:list[str])
@@ -181,14 +181,14 @@ def entry_iterator(contribs_path: str):
             raise ValueError('ERROR entry_iterator: empty contribs file')
 
         # Header
-        if header != 'inputId layerId nodeId nodeContrib':
+        if header != 'inputId,layerId,nodeId,nodeContrib':
             raise ValueError(
                 f"ERROR entry_iterator: invalid header for contrib file, got '{header}' instead of 'inputId layerId nodeId nodeContrib'")
 
         contribs = []
         for line_index, (line, next_line) in enumerate(zip_longest(file_content, file_content[1:])):
             line = re.sub('\n$', '', line)
-            words = line.split()
+            words = line.strip(' ').split(sep=',')
             if len(words) != FILENAME_EXPECTED_LINE_LEN:
                 raise ValueError(
                     f'ERROR entry_iterator: invalid file list line length {len(words)} at line {line_index + 1}, ({FILENAME_EXPECTED_LINE_LEN} expected)')
@@ -200,7 +200,7 @@ def entry_iterator(contribs_path: str):
             # Otherwise, we need to look at the next line of the file to see if the input is different or not
             else:
                 next_line = re.sub('\n$', '', next_line)
-                next_words = next_line.split()
+                next_words = next_line.strip(' ').split(sep=',')
 
                 if words[0] != next_words[0]:
                     yield words[0], contribs
@@ -298,7 +298,7 @@ def get_hist_prob(layerId: int, nodeId: int, node_contrib: float,
     return hist_prob
 
 
-def compute_single_class_likelihood(contribs_path: str, save_path: str, hist_path: str):
+def compute_single_class_likelihood(contribs_path: Path, save_path: Path, hist_path: Path):
     """
     :param contribs_path: The string of the path where the nodes contributions are stored
     :param save_path: Path where to save file
@@ -306,7 +306,7 @@ def compute_single_class_likelihood(contribs_path: str, save_path: str, hist_pat
     :return: Write in stdout the distance score of each input
     """
     with open(save_path, 'w', newline='') as csvfile:
-        csvwriter = csv.writer(csvfile, delimiter=' ')
+        csvwriter = csv.writer(csvfile)
         csvwriter.writerow(p.lh_header)
 
         lb_table, step_table, prob_table = get_hist_tables(hist_path)

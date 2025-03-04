@@ -4,14 +4,18 @@ from typing import Iterable
 from config.parameters import project_path, exp_dir_path, data_dir_name
 
 
-def run_exps(exp_list: int | Iterable[int], result_list: int | Iterable[int], mode: str | Iterable[str] = 'all'):
+def run_exps(exp_list: int | Iterable[int], mode: str | Iterable[str] = 'all'):
+    """
+    Run experiments
+    :param exp_list: List of experiments to run
+    :param mode: Either 'prep_exp', 'CPDExtract' or 'lh_repr' to specify to specific part of the experiment.
+    Use 'all' to run all
+    """
     os.system(f'export PYTHONPATH="{project_path}"')
     os.chdir(project_path)
 
     if isinstance(exp_list, int):
         exp_list = [exp_list]
-    if isinstance(result_list, int):
-        result_list = [result_list]
     if isinstance(mode, str):
         if mode == 'all':
             mode = {'prep_exp', 'CPDExtract', 'lh_repr'}
@@ -24,31 +28,34 @@ def run_exps(exp_list: int | Iterable[int], result_list: int | Iterable[int], mo
 
     for exp in exp_list:
         print(f"\n=== RUNNING EXP {exp} ===")
-        print(f"Path : {os.path.join(exp_dir_path, f"exp_{exp}")}\n")
+        exp_path = exp_dir_path / f"exp_{exp}"
+        print(f"Path : {exp_path}")
         if "prep_exp" in mode:
             return_code = os.system(
-                f"python3 src/pipelines/prep_exp.py -p '{os.path.join(exp_dir_path, f"exp_{exp}", data_dir_name)}/parameters.json'")
+                f"python3 src/pipelines/prep_exp.py -p '{exp_path / data_dir_name}/parameters.json'> '{exp_path / data_dir_name}/exp.log'")
             if return_code != 0:
                 break
-        for res in result_list:
+        for res in [1, 2]:
             print(f"\n--- RUNNING RESULT {res} ---")
-            print(f"Path : {os.path.join(exp_dir_path, f"exp_{exp}", f"results_{res}")}\n")
+            result_path = exp_path / f"results_{res}"
+            print(f"Path : {result_path}\n")
             if "CPDExtract" in mode:
                 return_code = os.system(
-                    f"python3 src/pipelines/CPDExtract.py -p '{os.path.join(exp_dir_path, f"exp_{exp}", f"results_{res}")}/parameters.json'")
+                    f"python3 src/pipelines/CPDExtract.py -p '{result_path}/parameters.json'> '{result_path}/exp.log'")
                 if return_code != 0:
                     break
             if "lh_repr" in mode:
                 return_code = os.system(
-                    f"python3 src/pipelines/lh_repr.py -p '{os.path.join(exp_dir_path, f"exp_{exp}", f"results_{res}")}/repr/parameters.json'")
+                    f"python3 src/pipelines/lh_repr.py -p '{result_path}/repr/parameters.json'> '{result_path}/repr/exp.log'")
                 if return_code != 0:
                     break
 
 
 if __name__ == "__main__":
-    run_exps(exp_list=[],
-             result_list=[],
-             mode=[])
-
-# ['prep_exp', 'CPDExtract']
-# 'lh_repr'
+    # run_exps(
+    #     exp_list=[6010, 6011, 6012, 6016, 6017, 6018, 6022, 6023, '6010_1', '6010_2', '6010_3', 8010, 8011, 8012, 8014,
+    #               8015, 8016, 9010, 9011, 9012, 9013, 9014, 9015],
+    #     mode='lh_repr')
+    run_exps(
+        exp_list=[5000],
+        mode='CPDExtract')

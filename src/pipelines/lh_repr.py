@@ -1,6 +1,6 @@
 import json
-import os
-from typing import Optional, Any
+from pathlib import Path
+from typing import Optional
 
 import matplotlib.ticker as tick
 import numpy as np
@@ -11,63 +11,18 @@ from scipy.stats import gaussian_kde
 import config.parameters as p
 from config.logger import create_logger
 from src.readers import file_reader
-from src.utils import parse_args
+from src.utils import parse_args, read_parameters
 
 
-def read_parameters(file: str) -> dict[str, Any]:
-    """Read parameters file and return python dict with absolute path using config file"""
-    with open(file) as param:
-        param_dict = json.load(param)
-
-    for key in ["file_x",
-                "file_y",
-                "scatter_color_bar"]:
-        if param_dict.get(key) is None:
-            raise ValueError(f"Missing key in parameters : {key}")
-
-    replaceable = [("plot_title", "scatter_title"), ("plot_label_x", "scatter_x_axis_name"),
-                   ("plot_label_y", "scatter_y_axis_name")]  # Attr that can be interchanged
-
-    for attr_1, attr_2 in replaceable:
-        if param_dict.get(attr_1) is None and param_dict.get(attr_2) is None:
-            raise ValueError(f"Missing parameters {attr_1} or {attr_2}")
-        if attr_1 not in param_dict and attr_2 in param_dict:
-            param_dict[attr_1] = param_dict[attr_2]
-        if "scatter_title" not in param_dict and attr_1 in param_dict:
-            param_dict[attr_2] = param_dict[attr_1]
-
-    if "plot_title" not in param_dict and "scatter_title" in param_dict:
-        param_dict["plot_title"] = param_dict["scatter_title"]
-    if "scatter_title" not in param_dict and "plot_title" in param_dict:
-        param_dict["scatter_title"] = param_dict["plot_title"]
-
-    # Use scatter axis and title names for plot
-
-    if param_dict.get("plot_label_x") is None:
-        param_dict["plot_label_x"] = param_dict["scatter_x_axis_name"]
-    if param_dict.get("plot_label_y") is None:
-        param_dict["plot_label_y"] = param_dict["scatter_y_axis_name"]
-
-    result_dir = os.path.dirname(os.path.dirname(file))
-
-    param_dict["file_x"] = os.path.join(result_dir, param_dict["file_x"])
-    param_dict["file_y"] = os.path.join(result_dir, param_dict["file_y"])
-
-    exp_dir = os.path.dirname(result_dir)
-    if param_dict.get("data_plain_left") is not None:
-        param_dict["data_plain_left"] = os.path.join(exp_dir, param_dict["data_plain_left"])
-    if param_dict.get("data_plain_right") is not None:
-        param_dict["data_plain_right"] = os.path.join(exp_dir, param_dict["data_plain_right"])
-    if param_dict.get("data_dashed_left") is not None:
-        param_dict["data_dashed_left"] = os.path.join(exp_dir, param_dict["data_dashed_left"])
-    if param_dict.get("data_dashed_right") is not None:
-        param_dict["data_dashed_right"] = os.path.join(exp_dir, param_dict["data_dashed_right"])
-
-    return param_dict
-
-
-def read_lh_files(file_x: str,
-                  file_y: str) -> tuple[tuple[list[int], list[float]], tuple[list[int], list[float]]] | None:
+def read_lh_files(file_x: Path,
+                  file_y: Path) -> tuple[tuple[list[int], list[float]], tuple[list[int], list[float]]] | None:
+    """
+    Read two likelihood files, and return for each the list of the id and the values
+    :param file_x: First file
+    :param file_y: Second file
+    :return: A tuple (id_x, x_data), (id_y, y_data), where id_x and id_y are id list of the two files and
+    x_data and y_data the CPL values for two files
+    """
     (coordinates_x, coordinates_y) = file_reader(file_x, header=p.lh_header), file_reader(file_y, header=p.lh_header)
 
     try:
@@ -100,13 +55,16 @@ def get_area(curve_1: list[tuple[float, float]], curve_2: list[tuple[float, floa
     x_2 = [x for x, _ in curve_2]
     y_1 = [y for _, y in curve_1]
     y_2 = [y for _, y in curve_2]
+    # Since we work we normalized CPD values, we only consider positive values
     if any([y < 0 for y in y_1]) or any([y < 0 for y in y_2]):
         logger.warning(
             "get_area function is not designed to work with negative values. Please reconsider curves")
+    # Check if data point of CPD curves are evenly spaced
     if not np.all(
             np.isclose(np.diff(x_1), np.full(shape=np.diff(x_1).shape, fill_value=np.diff(x_1)[0]), atol=p.EPSILON_PREC,
                        rtol=0.)):
         raise ValueError(f"X-coordinates are not evenly spaced {np.diff(x_1)}")
+    # Check if data point of CPD curves are evenly spaced
     if not np.all(
             np.isclose(np.diff(x_2), np.full(shape=np.diff(x_2).shape, fill_value=np.diff(x_2)[0]), atol=p.EPSILON_PREC,
                        rtol=0.)):
@@ -119,15 +77,16 @@ def get_area(curve_1: list[tuple[float, float]], curve_2: list[tuple[float, floa
     return round(area_1 - area_2, p.EPSILON_PREC)
 
 
-def plot_cpl_2d(file_x: str,
-                file_y: str,
-                save_dir: str,
+def plot_cpl_2d(file_x: Path,
+                file_y: Path,
+                save_dir: Path,
                 color_bar: bool,
                 title: str,
                 axis_x_name: str,
                 axis_y_name: str,
                 axis_min: Optional[float] = None,
                 axis_max: Optional[float] = None) -> str:
+    """Create and save the scatter plot of CPD values in 2D"""
     (id_x, x_data), (id_y, y_data) = read_lh_files(file_x, file_y)
 
     # region Creating and saving figure
@@ -169,15 +128,15 @@ def plot_cpl_2d(file_x: str,
     # Grid
     plt.grid()
     # Saving plot
-    scatter_save_path = os.path.join(save_dir, 'scatter')
-    fig.savefig(scatter_save_path, dpi=300)
+    scatter_save_path = save_dir / 'scatter.pdf'
+    fig.savefig(scatter_save_path, dpi=300, format='pdf')
 
     # endregion
 
     # region Exporting coordinates and logging proportions
     json_data = [[int(id_x[i]), x_data[i], y_data[i]] for i in range(len(id_x))]
 
-    with open(file=os.path.join(save_dir, 'coordinates.json'), mode='w') as out_file:
+    with open(file=save_dir / 'coordinates.json', mode='w') as out_file:
         json.dump(json_data, out_file)
 
     closer_to_y = sum([elem[0] < elem[1] for elem in zip(x_data, y_data)])
@@ -188,7 +147,8 @@ def plot_cpl_2d(file_x: str,
     # endregion
 
 
-def cpd_fraction_pop(file_x: str, file_y: str, save_dir: str, title: str, label_x: str, label_y: str) -> None:
+def cpd_fraction_pop(file_x: Path, file_y: Path, save_dir: Path, title: str, label_x: str, label_y: str) -> None:
+    """Create and save the plot of CPD along fraction of population"""
     (_, x_data), (_, y_data) = read_lh_files(file_x, file_y)
     x_data.sort(reverse=True)
     y_data.sort(reverse=True)
@@ -197,6 +157,8 @@ def cpd_fraction_pop(file_x: str, file_y: str, save_dir: str, title: str, label_
 
     frac_pop_x = []
     frac_pop_y = []
+    # For a certain amounts of CPD values between min and max,
+    # we count percentage of profiles with smaller CPD of the CPD value considered
     for cpd_value in np.linspace(min(x_data), max(x_data), number_of_dots):
         smaller_than = [elem for elem in x_data if elem > cpd_value]
         frac_pop_x.append(100 * len(smaller_than) / len(x_data))
@@ -222,17 +184,17 @@ def cpd_fraction_pop(file_x: str, file_y: str, save_dir: str, title: str, label_
     plt.grid()
     plt.legend()
     # Saving plot
-    plot_save_path = os.path.join(save_dir, 'plot')
-    fig.savefig(plot_save_path, dpi=300)
+    plot_save_path = save_dir / 'plot.pdf'
+    fig.savefig(plot_save_path, dpi=300, format='pdf')
 
     # endregion
 
 
-def dual_cpd_fraction_pop(data_plain_left: str,
-                          data_plain_right: str,
-                          data_dashed_left: str,
-                          data_dashed_right: str,
-                          save_dir: str,
+def dual_cpd_fraction_pop(data_plain_left: Path,
+                          data_plain_right: Path,
+                          data_dashed_left: Path,
+                          data_dashed_right: Path,
+                          save_dir: Path,
                           title: str = "",
                           label_ax_left: str = "",
                           label_ax_right: str = "",
@@ -249,16 +211,16 @@ def dual_cpd_fraction_pop(data_plain_left: str,
     :param label_ax_right: Label for the right Y-axis
     :param label_plain: Label for plain curves
     :param label_dashed: Label for dashed curves
-    :return: Save a graph
+    :return: Save a graph of four CPD distributions along fraction of respective population
     """
     # region read and treat data
     (_, data_left), (_, data_right) = read_lh_files(data_plain_left, data_plain_right)
     (_, data_left_dashed), (_, data_right_dashed) = read_lh_files(data_dashed_left, data_dashed_right)
 
-    data_left.sort(reverse=True)
-    data_right.sort(reverse=True)
-    data_left_dashed.sort(reverse=True)
-    data_right_dashed.sort(reverse=True)
+    data_left.sort(reverse=False)
+    data_right.sort(reverse=False)
+    data_left_dashed.sort(reverse=False)
+    data_right_dashed.sort(reverse=False)
 
     series_left = []
     series_left_dashed = []
@@ -273,32 +235,34 @@ def dual_cpd_fraction_pop(data_plain_left: str,
     max_left = max(data_left + data_left_dashed)
     max_right = max(data_right + data_right_dashed)
 
+    # For each percent between 0 and 1,
+    # we search for the first CPD value such that the proportions of inputs with smaller CPD value is equal to percent
+    # We repeat these operations for each series of data
     for percent in np.arange(0, 1 - 1 / len_plain, 1 / len_plain):
         for i, cpd_value in enumerate(data_left):
             if abs(i / len_plain - percent) < p.EPSILON:
-                series_left.append(cpd_value / max_left)
+                series_left.append((cpd_value-min(data_left)) / (max_left-min(data_left)))  # Normalization
                 break
 
         for i, cpd_value in enumerate(data_right):
             if abs(i / len_plain - percent) < p.EPSILON:
-                series_right.append(cpd_value / max_right)
+                series_right.append((cpd_value - min(data_right)) / (max_right-min(data_right)))
                 break
 
     for percent in np.arange(0, 1 - 1 / len_dashed, 1 / len_dashed):
         for i, cpd_value in enumerate(data_left_dashed):
             if abs(i / len_dashed - percent) < p.EPSILON:
-                series_left_dashed.append(cpd_value / max_left)
+                series_left_dashed.append((cpd_value - min(data_left_dashed)) / (max_left-min(data_left_dashed)))
                 break
 
         for i, cpd_value in enumerate(data_right_dashed):
             if abs(i / len_dashed - percent) < p.EPSILON:
-                series_right_dashed.append(cpd_value / max_right)
+                series_right_dashed.append((cpd_value-min(data_right_dashed)) / (max_right-min(data_right_dashed)))
                 break
 
     # endregion
 
     # region plot figure
-
     fig, ax = plt.subplots()
     fig.set_size_inches(10, 7)
     ax.set_title(title, wrap=True)
@@ -308,12 +272,12 @@ def dual_cpd_fraction_pop(data_plain_left: str,
     ax.xaxis.set_major_formatter(tick.PercentFormatter())
     # Y-axis
     ax.set_ylabel(label_ax_left, color='red')
-    ax.set_ylim(0, max(series_left + series_left_dashed) * 1.1)  # *1.1 to make graph readable
+    ax.set_ylim(0, max(series_right + series_right_dashed) * 1.1)  # *1.1 to make graph readable
 
     # Second Y-axis
     sec_ax = ax.secondary_yaxis('right')
     sec_ax.set_ylabel(label_ax_right, color='green')
-    sec_ax.set_ylim(0, max(series_right + series_right_dashed) * 1.1)  # *1.1 to make graph readable
+    sec_ax.set_ylim(0, max(series_left + series_left_dashed) * 1.1)  # *1.1 to make graph readable
 
     # Color axis and change width
     ax.spines['left'].set_color('red')
@@ -336,8 +300,9 @@ def dual_cpd_fraction_pop(data_plain_left: str,
 
     plt.grid()
 
-    plot_save_path = os.path.join(save_dir, 'dual_plot')
-    fig.savefig(plot_save_path, dpi=300)
+    exp_nbr = save_dir.parent.parent.stem
+    plot_save_path = save_dir / ('dual_plot_' + str(exp_nbr) + '_' + '.pdf')
+    fig.savefig(plot_save_path, dpi=300, format='pdf')
 
     # endregion
 
@@ -350,45 +315,51 @@ def dual_cpd_fraction_pop(data_plain_left: str,
     curve_dashed_right = [(x, y) for (x, y) in zip(np.linspace(0, 100, len(series_right_dashed)), series_right_dashed)]
 
     return (
-        f"The area between the curves {os.path.basename(data_plain_left)} and {os.path.basename(data_dashed_left)} is {get_area(curve_plain_left, curve_dashed_left)}.\n"
-        f"The area between the curves {os.path.basename(data_plain_right)} and {os.path.basename(data_dashed_right)} is {get_area(curve_plain_right, curve_dashed_right)}")
+        f"The area between the curves {data_plain_left.stem} and {data_dashed_left.stem} is {get_area(curve_plain_left, curve_dashed_left)}.\n"
+        f"The area between the curves {data_plain_right.stem} and {data_dashed_right.stem} is {get_area(curve_plain_right, curve_dashed_right)}")
     # endregion
 
 
 if __name__ == '__main__':
     # region PARAMETERS
     args = parse_args()
-    experiment_dir = os.path.dirname(args.param)
-    logger = create_logger(name=os.path.basename(__file__), level=p.LOG_LEVEL, file_dir=experiment_dir)
+    experiment_dir = Path(args.param).parent
+    logger = create_logger(name=Path(__file__).stem, level=p.LOG_LEVEL)
+    params = read_parameters(args.param,
+                             "file_x",
+                             "file_y",
+                             "plot_color_bar",
+                             "plot_label_x",
+                             "plot_label_y",
+                             "title")
+
     # endregion
 
-    params = read_parameters(args.param)
-
-    plot_infos = plot_cpl_2d(file_x=params["file_x"],
-                             file_y=params["file_y"],
+    plot_infos = plot_cpl_2d(file_x=Path(args.param).parents[1] / params["file_x"],
+                             file_y=Path(args.param).parents[1] / params["file_y"],
                              save_dir=experiment_dir,
-                             color_bar=params["scatter_color_bar"],
-                             title=params["scatter_title"],
-                             axis_x_name=params["scatter_x_axis_name"],
-                             axis_y_name=params["scatter_y_axis_name"],
-                             axis_min=params["scatter_axis_min_dim"],
-                             axis_max=params["scatter_axis_max_dim"])
+                             color_bar=params["plot_color_bar"],
+                             title=params["title"],
+                             axis_x_name=params["plot_label_x"],
+                             axis_y_name=params["plot_label_y"],
+                             axis_min=params.get("plot_axis_min_dim"),
+                             axis_max=params.get("plot_axis_max_dim"))
 
     logger.info(plot_infos)
 
-    cpd_fraction_pop(file_x=params["file_x"],
-                     file_y=params["file_y"],
+    cpd_fraction_pop(file_x=Path(args.param).parents[1] / params["file_x"],
+                     file_y=Path(args.param).parents[1] / params["file_y"],
                      save_dir=experiment_dir,
-                     title=params["plot_title"],
+                     title=params["title"],
                      label_x=params["plot_label_x"],
                      label_y=params["plot_label_y"])
 
     if params.get("data_plain_left") and params.get("data_plain_right") and params.get(
             "data_dashed_left") and params.get("data_dashed_right"):
-        dual_plot_info = dual_cpd_fraction_pop(data_plain_left=params["data_plain_left"],
-                                               data_plain_right=params["data_plain_right"],
-                                               data_dashed_left=params["data_dashed_left"],
-                                               data_dashed_right=params["data_dashed_right"],
+        dual_plot_info = dual_cpd_fraction_pop(data_plain_left=experiment_dir.parents[1] / params["data_plain_left"],
+                                               data_plain_right=experiment_dir.parents[1] / params["data_plain_right"],
+                                               data_dashed_left=experiment_dir.parents[1] / params["data_dashed_left"],
+                                               data_dashed_right=experiment_dir.parents[1] / params["data_dashed_right"],
                                                save_dir=experiment_dir,
                                                label_ax_left=params["label_ax_left"],
                                                label_ax_right=params["label_ax_right"],

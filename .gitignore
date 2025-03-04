@@ -1,2 +1,5 @@
 .idea/
-experiments/**/exp.log
+experiments/**
+experiments_post/**
+test/**
+src/scripts/**
