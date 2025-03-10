@@ -1,0 +1,19 @@
+{
+  "file_x": "lh_f-lr.csv",
+  "file_y": "lh_f-hr.csv",
+  "plot_color_bar": true,
+  "title": "CPD Score: Inputs Female Low and High Revenue of test set",
+  "plot_label_x": "Histogram Low Revenue",
+  "plot_label_y": "Histogram High Revenue",
+  "plot_axis_min_dim": 0,
+  "plot_axis_max_dim": 4430,
+  "data_plain_left": "results_1/lh_m-lr.csv",
+  "data_plain_right": "results_1/lh_m-hr.csv",
+  "data_dashed_left": "results_2/lh_f-lr.csv",
+  "data_dashed_right": "results_2/lh_f-hr.csv",
+  "label_ax_left": "Normalized CPD from LR class",
+  "label_ax_right": "Normalized CPD from HR class",
+  "label_plain": "Male profiles",
+  "label_dashed": "Female profiles",
+  "dual_plot_title": ""
+}

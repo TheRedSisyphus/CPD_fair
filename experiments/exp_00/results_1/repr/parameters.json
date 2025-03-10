@@ -1,0 +1,10 @@
+{
+  "file_x": "lh_m-lr.csv",
+  "file_y": "lh_m-hr.csv",
+  "plot_color_bar": true,
+  "title": "CPD Score: Inputs Male Low and High Revenue of test set",
+  "plot_label_x": "Histogram Low Revenue",
+  "plot_label_y": "Histogram High Revenue",
+  "plot_axis_min_dim": 0,
+  "plot_axis_max_dim": 4430
+}

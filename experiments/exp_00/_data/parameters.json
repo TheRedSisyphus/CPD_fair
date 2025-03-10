@@ -1,0 +1,20 @@
+{
+  "db_name": "adult",
+  "pa_name": "sex",
+  "sanitization_level": null,
+  "balance": null,
+  "cr_attr_name": null,
+  "dir_attr_name": null,
+  "favorable_classes": null,
+  "privileged_classes": null,
+  "model_dimensions": [
+    103,
+    128,
+    128,
+    2
+  ],
+  "model_lr": 0.001,
+  "model_epochs": 100,
+  "favorable_class": "1",
+  "privileged_class": "1"
+}

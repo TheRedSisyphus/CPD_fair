@@ -1,5 +1,16 @@
 .idea/
 experiments/**
+!experiments/exp_00/
+!experiments/exp_00/_data/
+!experiments/exp_00/_data/parameters.json
+!experiments/exp_00/results_1/
+!experiments/exp_00/results_1/parameters.json
+!experiments/exp_00/results_2/
+!experiments/exp_00/results_2/parameters.json
+!experiments/exp_00/results_1/repr/
+!experiments/exp_00/results_1/repr/parameters.json
+!experiments/exp_00/results_2/repr/
+!experiments/exp_00/results_2/repr/parameters.json
 experiments_post/**
 test/**
 src/scripts/**
